@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app =express();
 const port = process.env.PORT || 5000;
 
@@ -24,15 +24,9 @@ async function run() {
     await client.connect();
 
     const productCollection = client.db('productsDB').collection('products')
+    const cartCollection = client.db('productsDB').collection('carts')
 
-
-    app.get('/products', async(req, res) => {
-      const cursor = productCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-
-
+    
     app.post('/products', async(req,res) => {
       const newProduct = req.body;
       console.log(newProduct);
@@ -40,7 +34,51 @@ async function run() {
       res.send(result);
      })
 
+     app.get('/products', async(req, res) => {
+      const cursor = productCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await productCollection.findOne(query)
+      res.send(result)
+    })
+// card
+    app.post("/cart", async (req, res) => {
+      const cart = req.body;
+      const result = await cartCollection.insertOne(cart);
+      res.send(result)
+    })
+    
+    app.get("/cart", async (req, res) => {
+      const cursor = cartCollection.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+// update cart
 
+app.put("/products/:id",  async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) }
+  const options = { upsert: true }
+  const updateProduct = req.body;
+  const newProduct = {
+    $set: {
+
+    name: updateProduct.name,
+    brand: updateProduct.brand,
+    type: updateProduct.type,
+    price: updateProduct.price,
+    rating: updateProduct.rating,
+    photo: updateProduct.photo,
+    details: updateProduct.details
+    },
+  }
+  const result = await productCollection.updateOne(query, newProduct, options)
+  res.send(result)
+})
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
